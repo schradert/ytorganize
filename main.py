@@ -210,6 +210,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#vsrivastav@exyntechnologies.com
-#conor@dura.software

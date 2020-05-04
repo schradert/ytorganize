@@ -25,25 +25,26 @@ class YouTubeClient:
         response = request.execute()
         playlists = [(playlist['id'], playlist['snippet']['title'])
                      for playlist in response['items']]
-        return playlists
+        return zip(*playlists)
 
     def get_subscriptions(self):
         request = self.youtube.subscriptions().list(
             part="snippet", mine=True, maxResults=50)
         response = request.execute()
-        if response['prevPageToken']:
+        if response['nextPageToken']:
             response += YouTubeClient.process_multiple_pages(
-                self.youtube.subscriptions().list, response['prevPageToken'])
-        subscriptions = response['items']
+                self.youtube.subscriptions().list, response['nextPageToken'])
+        subscriptions = [subscription['snippet']['channelId']
+                         for subscription in response['items']]
         return subscriptions
 
     def get_playlist_videos(self, playlist_id):
         request = self.youtube.playlistItems().list(
             part="snippet", playlistId=playlist_id)
         response = request.execute()
-        if response['prevPageToken']:
+        if response['nextPageToken']:
             response += YouTubeClient.process_multiple_pages(
-                self.youtube.playlistItems().list, response['prevPageToken'])
+                self.youtube.playlistItems().list, response['nextPageToken'])
         videos = [YouTubeClient.extract_video_data(
             video, 'playlistItem') for video in response['items']]
         return videos
@@ -53,9 +54,9 @@ class YouTubeClient:
                                              publishedAfter=time_ref.isoformat(), type='video')
         # TODO: do I need to format date by appending 'T00:00:00.000Z'
         response = request.execute()
-        if response['prevPageToken']:
+        if response['nextPageToken']:
             response += YouTubeClient.process_multiple_pages(
-                self.youtube.search().list, response['prevPageToken'])
+                self.youtube.search().list, response['nextPageToken'])
         videos = [YouTubeClient.extract_video_data(
             video, 'search') for video in response['items']]
         return videos
@@ -89,6 +90,6 @@ class YouTubeClient:
     @staticmethod
     def process_multiple_pages(command, pageToken):
         res = command(pageToken=pageToken).execute()
-        if res['prevPageToken']:
-            return res + YouTubeClient.process_multiple_pages(command, res['prevPageToken'])
+        if res['nextPageToken']:
+            return res + YouTubeClient.process_multiple_pages(command, res['nextPageToken'])
         return res
